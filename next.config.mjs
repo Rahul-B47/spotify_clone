@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  images: {
+    domains: ['res.cloudinary.com', 'img.youtube.com'], // add all external domains here
+  },
 };
 
 export default nextConfig;
