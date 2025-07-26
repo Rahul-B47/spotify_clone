@@ -67,21 +67,17 @@ export default function BottomPlayerBar() {
     return <FaVolumeUp />;
   };
 
-  const handleToggleExpand = () => {
-    setIsExpanded((prev) => !prev);
-  };
-
   const navigateToDetails = () => {
     router.push("/song-details");
   };
 
   return (
     <>
-      {/* Expanded View */}
+      {/* Expanded Fullscreen View */}
       {isExpanded && (
         <div className="fixed inset-0 bg-neutral-950 text-white z-[9999] flex flex-col items-center justify-center px-6 py-10">
           <button
-            onClick={handleToggleExpand}
+            onClick={() => setIsExpanded(false)}
             className="absolute top-4 right-4 text-white text-2xl"
           >
             <FaTimes />
@@ -166,98 +162,151 @@ export default function BottomPlayerBar() {
       )}
 
       {/* Bottom Player Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-neutral-900 text-white px-3 py-2 flex flex-col sm:flex-row items-center justify-between border-t border-neutral-800 z-50">
-        {/* Song Info */}
-        <div
-          className="flex items-center gap-3 sm:w-1/3 w-full px-2 cursor-pointer"
-          onClick={navigateToDetails}
-        >
-          <Image
-            src={currentSong.image || "/images/default_cover.jpg"}
-            alt={currentSong.title}
-            width={48}
-            height={48}
-            className="w-12 h-12 rounded object-cover"
-          />
-          <div className="truncate">
-            <p className="text-sm font-semibold truncate">{currentSong.title}</p>
-            <p className="text-xs text-gray-400 truncate">{currentSong.artist}</p>
+      <div className="fixed bottom-0 left-0 right-0 bg-neutral-900 text-white px-3 py-2 border-t border-neutral-800 z-50">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+          {/* Song Info */}
+          <div
+            className="flex items-center gap-3 sm:w-1/3 w-full px-2 cursor-pointer"
+            onClick={navigateToDetails}
+          >
+            <Image
+              src={currentSong.image || "/images/default_cover.jpg"}
+              alt={currentSong.title}
+              width={48}
+              height={48}
+              className="w-12 h-12 rounded object-cover"
+            />
+            <div className="truncate">
+              <p className="text-sm font-semibold truncate">{currentSong.title}</p>
+              <p className="text-xs text-gray-400 truncate">{currentSong.artist}</p>
+            </div>
           </div>
-        </div>
 
-        {/* Controls */}
-        <div
-          className="flex items-center justify-center gap-4 sm:w-1/3 w-full mt-2 sm:mt-0"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => setShuffle((prev) => !prev)}
-            className={shuffle ? "text-green-400" : "text-white"}
-          >
-            <FaRandom />
-          </button>
-
-          <button onClick={playPrevious} className="hover:scale-110 transition">
-            <FaStepBackward />
-          </button>
-
-          <button
-            onClick={togglePlay}
-            className="bg-white text-black p-2 rounded-full hover:scale-110 transition"
-          >
-            {isPlaying ? <FaPause /> : <FaPlay />}
-          </button>
-
-          <button onClick={playNext} className="hover:scale-110 transition">
-            <FaStepForward />
-          </button>
-
-          <button
-            onClick={() => setRepeat((prev) => !prev)}
-            className={repeat ? "text-green-400" : "text-white"}
-          >
-            <FaRedo />
-          </button>
-        </div>
-
-        {/* Progress Bar + Volume */}
-        <div
-          className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-1/3 pr-2 mt-2 sm:mt-0"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Progress Bar */}
-          <div className="flex items-center gap-2 w-full">
-            <span className="text-xs text-gray-400 min-w-[30px]">
-              {formatTime(progress)}
-            </span>
-            <div
-              className="flex-1 h-1 bg-gray-600 rounded cursor-pointer relative"
-              onClick={handleSeek}
-            >
-              <div
-                className="h-1 bg-green-500 rounded transition-all duration-200 ease-linear"
-                style={{ width: `${(progress / duration) * 100}%` }}
+          {/* Mobile View (Stacked Controls) */}
+          <div className="sm:hidden w-full flex flex-col items-center justify-center gap-2">
+            {/* Volume Control on Top */}
+            <div className="flex items-center justify-start w-full px-4 gap-2">
+              <button onClick={toggleMute} className="text-lg">
+                {renderVolumeIcon()}
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="w-28 accent-green-500"
               />
             </div>
-            <span className="text-xs text-gray-400 min-w-[30px]">
-              {formatTime(duration)}
-            </span>
+
+            {/* Playback Controls */}
+            <div className="flex items-center justify-center gap-4 mt-1">
+              <button
+                onClick={() => setShuffle((prev) => !prev)}
+                className={shuffle ? "text-green-400" : "text-white"}
+              >
+                <FaRandom />
+              </button>
+              <button onClick={playPrevious} className="hover:scale-110 transition">
+                <FaStepBackward />
+              </button>
+              <button
+                onClick={togglePlay}
+                className="bg-white text-black p-2 rounded-full hover:scale-110 transition"
+              >
+                {isPlaying ? <FaPause /> : <FaPlay />}
+              </button>
+              <button onClick={playNext} className="hover:scale-110 transition">
+                <FaStepForward />
+              </button>
+              <button
+                onClick={() => setRepeat((prev) => !prev)}
+                className={repeat ? "text-green-400" : "text-white"}
+              >
+                <FaRedo />
+              </button>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="flex items-center gap-2 w-full px-4 mt-1">
+              <span className="text-xs text-gray-400 min-w-[30px]">
+                {formatTime(progress)}
+              </span>
+              <div
+                className="flex-1 h-1 bg-gray-600 rounded cursor-pointer relative"
+                onClick={handleSeek}
+              >
+                <div
+                  className="h-1 bg-green-500 rounded transition-all duration-200 ease-linear"
+                  style={{ width: `${(progress / duration) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-400 min-w-[30px]">
+                {formatTime(duration)}
+              </span>
+            </div>
           </div>
 
-          {/* Volume Control */}
-          <div className="flex items-center gap-2 w-full sm:w-auto mt-1 sm:mt-0">
-            <button onClick={toggleMute} className="text-xl">
-              {renderVolumeIcon()}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={volume}
-              onChange={(e) => setVolume(parseFloat(e.target.value))}
-              className="w-24 accent-green-500"
-            />
+          {/* Desktop View */}
+          <div className="hidden sm:flex items-center justify-between w-2/3 gap-4">
+            {/* Controls */}
+            <div className="flex items-center justify-center gap-4 flex-1">
+              <button
+                onClick={() => setShuffle((prev) => !prev)}
+                className={shuffle ? "text-green-400" : "text-white"}
+              >
+                <FaRandom />
+              </button>
+              <button onClick={playPrevious} className="hover:scale-110 transition">
+                <FaStepBackward />
+              </button>
+              <button
+                onClick={togglePlay}
+                className="bg-white text-black p-2 rounded-full hover:scale-110 transition"
+              >
+                {isPlaying ? <FaPause /> : <FaPlay />}
+              </button>
+              <button onClick={playNext} className="hover:scale-110 transition">
+                <FaStepForward />
+              </button>
+              <button
+                onClick={() => setRepeat((prev) => !prev)}
+                className={repeat ? "text-green-400" : "text-white"}
+              >
+                <FaRedo />
+              </button>
+            </div>
+
+            {/* Progress & Volume */}
+            <div className="flex items-center gap-4 w-full max-w-md">
+              {/* Progress */}
+              <span className="text-xs text-gray-400">{formatTime(progress)}</span>
+              <div
+                className="flex-1 h-1 bg-gray-600 rounded cursor-pointer relative"
+                onClick={handleSeek}
+              >
+                <div
+                  className="h-1 bg-green-500 rounded transition-all duration-200 ease-linear"
+                  style={{ width: `${(progress / duration) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-400">{formatTime(duration)}</span>
+
+              {/* Volume */}
+              <button onClick={toggleMute} className="text-lg">
+                {renderVolumeIcon()}
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="w-24 accent-green-500"
+              />
+            </div>
           </div>
         </div>
       </div>
