@@ -1,91 +1,173 @@
 "use client";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { FaPlay, FaTrash } from "react-icons/fa";
-import { toast } from "react-hot-toast";
-import { deleteDoc, doc } from "firebase/firestore";
+
+import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  serverTimestamp,
+} from "firebase/firestore";
+import { useAuth } from "@/context/AuthContext";
+import toast from "react-hot-toast";
+import { X } from "lucide-react";
+import { FaMusic } from "react-icons/fa";
 
-export default function PlaylistCard({ id, title, image, isHardcoded = false }) {
-  const router = useRouter();
+export default function CreatePlaylistModal({ onClose }) {
+  const { user } = useAuth();
+  const [name, setName] = useState("");
+  const [songs, setSongs] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handlePlay = () => {
-    if (isHardcoded) {
-      router.push(`/playlist/${id}`);
-    } else {
-      router.push(`/playlist/${id}`);
-    }
+  // Fetch songs only if user is logged in
+  useEffect(() => {
+    const fetchSongs = async () => {
+      if (!user) return;
+
+      try {
+        const q = query(collection(db, "songs"), orderBy("title"));
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setSongs(data);
+      } catch (err) {
+        console.error("Failed to fetch songs:", err);
+        setError("Login to view songs.");
+      }
+    };
+
+    fetchSongs();
+  }, [user]);
+
+  const toggleSelect = (id) => {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    );
   };
 
-  const handleDelete = async (e) => {
-    e.stopPropagation();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
 
-    if (isHardcoded) return;
-
-    const confirmed = confirm("Are you sure you want to delete this playlist?");
-    if (!confirmed) return;
+    if (!name.trim()) return setError("Please enter a playlist name.");
+    if (!user || !user.email)
+      return setError("You must be logged in to create a playlist.");
+    if (selected.length === 0)
+      return setError("Select at least one song to add.");
 
     try {
-      await deleteDoc(doc(db, "playlists", id));
-      toast.success("Playlist deleted!");
+      setLoading(true);
+      await addDoc(collection(db, "playlists"), {
+        name: name.trim(),
+        createdBy: user.uid,
+        createdAt: serverTimestamp(),
+        songs: selected,
+      });
+
+      toast.success("Playlist created!");
+      setName("");
+      onClose();
     } catch (err) {
-      console.error("Delete failed", err);
-      toast.error("Failed to delete playlist");
+      console.error("Failed to create playlist:", err);
+      setError("Something went wrong.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div
-      onClick={handlePlay}
-      className="group relative bg-neutral-800 hover:bg-neutral-700 p-4 rounded-lg transition-all duration-300 cursor-pointer"
-    >
-      {/* Playlist Cover */}
-      <div className="relative w-full aspect-square overflow-hidden rounded-md">
-        <Image
-          src={image || "/images/lofi.jpg"}
-          alt={title}
-          width={300}
-          height={300}
-          className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
-        />
-
-        {/* Delete Button */}
-        {!isHardcoded && (
-          <div className="absolute inset-0 flex items-center justify-end gap-2 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/30">
-            <button
-              onClick={handleDelete}
-              className="p-2 bg-red-500 text-white rounded-full hover:scale-110 transition-transform"
-              title="Delete Playlist"
-            >
-              <FaTrash size={14} />
-            </button>
-          </div>
-        )}
-
-        {/* Play Button – Always visible in mobile, hover only in desktop */}
-        <div
-          className="
-            absolute bottom-3 right-3 
-            md:opacity-0 md:group-hover:opacity-100 
-            md:translate-y-2 md:group-hover:translate-y-0 
-            transition-all duration-300
-          "
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+      <div className="relative w-[95%] max-w-2xl bg-[#121212] border border-neutral-700 rounded-xl shadow-2xl p-6 animate-fade-in overflow-y-auto max-h-[90vh]">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-neutral-400 hover:text-white transition"
         >
-          <button
-            className="bg-green-500 text-black p-3 rounded-full shadow-lg hover:scale-110"
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePlay();
-            }}
-            title="Play"
-          >
-            <FaPlay size={16} />
-          </button>
-        </div>
-      </div>
+          <X size={20} />
+        </button>
 
-      {/* Playlist Title */}
-      <h3 className="text-sm font-semibold mt-3 truncate">{title}</h3>
+        <h2 className="text-white text-2xl font-bold mb-4">Create Playlist</h2>
+
+        {/* Not logged in message */}
+        {!user ? (
+          <p className="text-white text-center py-10">
+            🚫 You must <span className="text-green-400 font-semibold">log in</span> to create a playlist.
+          </p>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm text-neutral-400 block mb-1">Playlist Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={loading}
+                placeholder="e.g. Road Trip"
+                className="w-full px-4 py-2 text-white bg-neutral-800 rounded-md border border-transparent focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-neutral-500"
+              />
+            </div>
+
+            {/* Songs List */}
+            <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
+              {songs.length === 0 && (
+                <p className="text-sm text-gray-400">No songs available.</p>
+              )}
+              {songs.map((song) => {
+                const isSelected = selected.includes(song.id);
+                return (
+                  <div
+                    key={song.id}
+                    onClick={() => toggleSelect(song.id)}
+                    className={`flex items-center justify-between p-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 cursor-pointer group transition ${
+                      isSelected ? "ring-2 ring-green-500 scale-[1.01]" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <FaMusic className="text-green-400" />
+                      <div>
+                        <p className="font-medium text-white">{song.title}</p>
+                        <p className="text-sm text-gray-400">{song.artist}</p>
+                      </div>
+                    </div>
+
+                    {isSelected && (
+                      <span className="text-xs bg-white text-black px-2 py-1 rounded-full">
+                        Selected
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {error && <p className="text-sm text-red-500">{error}</p>}
+
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm bg-neutral-700 hover:bg-neutral-600 text-white rounded-md"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm font-medium bg-green-500 text-black rounded-md hover:bg-green-400 transition disabled:opacity-50"
+                disabled={loading}
+              >
+                {loading ? "Creating..." : "Create Playlist"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

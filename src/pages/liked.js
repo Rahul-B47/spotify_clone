@@ -21,7 +21,7 @@ export default function LikedSongsPage() {
         const likedRef = collection(db, "users", user.uid, "likedSongs");
         const snapshot = await getDocs(likedRef);
         const songs = snapshot.docs.map((doc) => ({
-          id: doc.id, // ✅ Explicit song ID
+          id: doc.id,
           ...doc.data(),
         }));
         setLikedSongs(songs);
@@ -53,12 +53,13 @@ export default function LikedSongsPage() {
             {likedSongs.map((song) => (
               <SongCard
                 key={song.id}
-                id={song.id} // ✅ FIXED: Explicitly pass the ID
+                id={song.id}
                 title={song.title}
                 artist={song.artist}
                 image={song.image}
-                audioUrl={song.audioUrl}
-                playlist={playlist.songs}
+                audioUrl={song.audioUrl || null}
+                youtubeUrl={song.youtubeUrl || null}
+                playlist={likedSongs} // ✅ FIXED: Send liked songs as the playlist
               />
             ))}
           </div>

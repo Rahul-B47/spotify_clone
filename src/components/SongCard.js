@@ -13,7 +13,7 @@ export default function SongCard({
   artist,
   image,
   audioUrl,
-  youtubeUrl, // ✅ NEW: for YouTube-based songs
+  youtubeUrl, // ✅ optional
   playlist = [],
 }) {
   const router = useRouter();
@@ -33,7 +33,6 @@ export default function SongCard({
     return () => unsubscribe?.();
   }, [user?.uid, id, isSongLiked]);
 
-  // ▶️ Play logic for Firebase or YouTube songs
   const handlePlay = () => {
     const sourceType = youtubeUrl ? "youtube" : "firebase";
 
@@ -66,7 +65,6 @@ export default function SongCard({
     }
   };
 
-  // ❤️ Like/unlike logic
   const handleLikeToggle = async (e) => {
     e.stopPropagation();
     if (!user?.uid || likeLoading) return;
@@ -77,14 +75,18 @@ export default function SongCard({
         await unlikeSong(id);
         setLiked(false);
       } else {
-        await likeSong({
+        // ✅ Prepare only defined fields for Firestore
+        const likeData = {
           id: id || `${title}-${artist}`.replace(/\s+/g, "-").toLowerCase(),
           title,
           artist,
           image,
-          audioUrl,
-          youtubeUrl,
-        });
+        };
+
+        if (audioUrl) likeData.audioUrl = audioUrl;
+        if (youtubeUrl) likeData.youtubeUrl = youtubeUrl;
+
+        await likeSong(likeData);
         setLiked(true);
       }
     } catch (error) {
@@ -127,7 +129,7 @@ export default function SongCard({
           )}
         </button>
 
-        {/* ▶️ Mobile */}
+        {/* ▶️ Mobile Play */}
         <div className="absolute bottom-2 right-2 md:hidden z-10">
           <button
             className="bg-green-500 text-black p-4 rounded-full shadow-md hover:scale-110 transition"
@@ -141,7 +143,7 @@ export default function SongCard({
           </button>
         </div>
 
-        {/* ▶️ Desktop */}
+        {/* ▶️ Desktop Play */}
         <div className="hidden md:flex absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
           <button
             className="bg-green-500 text-black p-3 rounded-full shadow-md hover:scale-110 transition"
